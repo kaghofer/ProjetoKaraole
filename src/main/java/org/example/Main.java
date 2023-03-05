@@ -1,5 +1,7 @@
 package org.example;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.sql.*;
 import java.util.concurrent.TimeUnit;
@@ -12,50 +14,51 @@ public class Main {
 
     public static void main(String[] args) {
 
-        var t1 = System.nanoTime();
         Properties props = new Properties();
         props.setProperty("user", "postgres");
         props.setProperty("password", "123456");
 
-        System.out.println(props.get("password"));
-
         try {
-            Connection conn = DriverManager.getConnection(DB_URL, props);
+            Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
             Statement stmt = conn.createStatement();
 
+            int id = 2;
 
-            String sql = "select * from teste";
+            PreparedStatement ps =  conn.prepareStatement("select * from teste inner join endereco on endereco.id = teste.endereco where teste.id = ? and teste.nome like ?");
+            ps.setInt(1, id);
+            ps.setString(2, "%da%");
 
+            List<Properties> list = RetornaPessoas(conn);
 
-            ResultSet rs = stmt.executeQuery(sql);
-
-            while (rs.next()) {
-                System.out.println("ID: " + rs.getInt("id"));
-                System.out.println("Nome: " + rs.getString("nome"));
-                System.out.println("ID End: " + rs.getInt("endereco"));
+            for (Properties p:list) {
+                System.out.print(p.get("id")+"\t");
+                System.out.println(p.get("nome"));
             }
-            var t2 = System.nanoTime();
-            System.out.println("Temp 1: " + t1);
-            System.out.println("Temp 2: " + t2);
-            System.out.println("Diferença " + (t2 - t1));
-
-            double passado = ((t2 - t1) / 1000000000);
-            System.out.println(passado);
 
 
-            rs.close();
         } catch (SQLException e) {
-            if (e.getMessage().contains("Bad value for type")) {
-                System.out.println("Coluna da pesquisa com problemas");
-            }
-            if (e.getMessage().toUpperCase().contains("QQQ".toUpperCase())) {
-                System.out.println("Bla bla bla");
-            }
-            if (e.getMessage().toUpperCase().contains("PASSWORD")) {
-                System.out.println("USER OU PASS ERROR");
-            }
-            //throw new RuntimeException(e);
+            throw new RuntimeException(e);
         }
 
     }
+
+    public static List<Properties> RetornaPessoas(Connection connection) throws SQLException {
+        Statement st = connection.createStatement();
+        String query = "select * from teste";
+        ResultSet rs = st.executeQuery(query);
+
+        List<Properties> lista = new ArrayList<>();
+
+        while (rs.next())
+        {
+            Properties prop = new Properties();
+            prop.setProperty("id", rs.getString("id"));
+            prop.setProperty("nome", rs.getString("nome"));
+            prop.setProperty("id_endereço", rs.getString("endereco"));
+            lista.add(prop);
+        }
+        rs.close();
+        return lista;
+    }
+
 }
